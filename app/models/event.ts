@@ -3,6 +3,7 @@ import type { BelongsTo, HasMany } from "@adonisjs/lucid/types/relations";
 import { DateTime } from "luxon";
 
 import Participant from "./participant.js";
+import Email from "#models/email";
 
 // import Admin from './Admin.ts';
 // import Form from './Form.ts';
@@ -58,4 +59,7 @@ export default class Event extends BaseModel {
 
   @hasMany(() => Participant)
   declare participants: HasMany<typeof Participant>;
+
+  @hasMany(() => Email)
+  declare emails: HasMany<typeof Email>;
 }
