@@ -1,23 +1,24 @@
-import { HttpContext } from '@adonisjs/core/http';
-import Participant from '#models/participant';
-// import Email from '#models/email';
-import { participantsStoreValidator, participantsUpdateValidator } from '#validators/participants';
+import { HttpContext } from '@adonisjs/core/http'
+import Participant from '#models/participant'
+import { participantsStoreValidator, participantsUpdateValidator } from '#validators/participants'
 
 export default class ParticipantsController {
   /**
-   * Display a list of resources
+   * Display a list of resource
    */
-  async index({ response }: HttpContext) {
-    const participants = await Participant.all();
-    if (!participants) {
-      return response.status(404).send([]);
-    }
-    return participants;
-  }
+
+  async index({response}: HttpContext) {
+      const participants = await Participant.all();
+      if (!participants) {
+        return response.status(404).send([]);
+      }
+      return participants;
+}
 
   /**
    * Handle form submission for the create action
    */
+
   async store({ request, response }: HttpContext) {
     const data = await participantsStoreValidator.validate(request.all());
     const participant = await Participant.create(data);
@@ -28,8 +29,8 @@ export default class ParticipantsController {
    * Show individual record
    */
   async show({ params }: HttpContext) {
-    return await Participant.findOrFail(params.id);
-  }
+      return await Participant.findOrFail(params.id);
+}
 
   /**
    * Edit individual record
@@ -39,7 +40,7 @@ export default class ParticipantsController {
     const participant = await Participant.findOrFail(params.id);
     participant.merge(data);
     await participant.save();
-    return { message: `Participant successfully updated.`, participant };
+    return {"message": `Participant successfully updated.`, participant};
   }
 
   /**
@@ -48,26 +49,6 @@ export default class ParticipantsController {
   async destroy({ params }: HttpContext) {
     const participant = await Participant.findOrFail(params.id);
     await participant.delete();
-    return { message: `Participant successfully deleted.` };
-  }
-
-  /**
-   * Attach and send email to participant
-   */
-  async sendEmail({ params, request, response }: HttpContext) {
-    const participant = await Participant.findOrFail(params.id);
-
-    const emailId = request.input('email_id') as number;
-    const pivotData = request.only(['send_at', 'send_by', 'status']) as {
-      send_at?: string;
-      send_by?: string;
-      status?: string;
-    };
-
-    // const email = await Email.findOrFail(emailId);
-
-    await participant.related('emails').attach({ [emailId]: pivotData });
-
-    return response.status(201).send({ message: 'Email successfully sent' });
+    return {"message": `Participant successfully deleted.`};
   }
 }
