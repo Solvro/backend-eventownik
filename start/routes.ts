@@ -10,6 +10,7 @@ const ParticipantsController = () => import("#controllers/participants_controlle
 const AuthController = () => import("#controllers/auth_controller");
 const PermissionsController = () => import("#controllers/permissions_controller");
 const AdminsController = () => import("#controllers/admins_controller");
+const FormsController = () => import("#controllers/forms_controller");
 
 router.get("/swagger", async () => {
   return AutoSwagger.default.docs(router.toJSON(), swagger);
@@ -26,7 +27,15 @@ router
     router.resource("events", EventController);
     router.resource("blocks", BlocksController);
 
-
+    router
+      .group(() => {
+        router.get('/', [FormsController, 'index'])
+        router.post('/', [FormsController, 'store'])
+        router.get('/:formId', [FormsController, 'show'])
+        router.put('/:formId', [FormsController, 'update'])
+        router.delete('/:formId', [FormsController, 'destroy'])
+      })
+      .prefix('/events/:id/forms')
 
     router
       .group(() => {
