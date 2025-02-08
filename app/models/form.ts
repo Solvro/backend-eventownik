@@ -20,6 +20,9 @@ export default class Form extends BaseModel {
   @column()
   declare name: string;
 
+  @column()
+  declare slug: string;
+  
   @column.dateTime()
   declare startDate: DateTime;
 
