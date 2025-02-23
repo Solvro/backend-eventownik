@@ -18,6 +18,10 @@ const AdminsController = () => import("#controllers/admins_controller");
 const OrganizersController = () => import("#controllers/organizers_controller");
 const FormsController = () => import("#controllers/forms_controller");
 const EmailsController = () => import("#controllers/emails_controller");
+const EventImportController = () =>
+  import("#controllers/event_import_controller");
+const EventExportController = () =>
+  import("#controllers/event_export_controller");
 
 router.get("/swagger", async () => {
   return AutoSwagger.default.docs(router.toJSON(), swagger);
@@ -41,6 +45,10 @@ router
             router.resource("emails", EmailsController).apiOnly();
             router.resource("forms", FormsController).apiOnly();
             router.resource("organizers", OrganizersController).apiOnly();
+            // Participants/export and participants/import must be defined before the resource route
+            // Otherwise, the words "export" and "import" will be treated as ids
+            router.get("participants/export", [EventExportController]);
+            router.post("participants/import", [EventImportController]);
             router.resource("participants", ParticipantsController).apiOnly();
           })
           .prefix("events/:eventId");
