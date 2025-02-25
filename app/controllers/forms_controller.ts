@@ -2,7 +2,11 @@ import type { HttpContext } from "@adonisjs/core/http";
 
 import Event from "#models/event";
 import Form from "#models/form";
-import { createFormValidator, updateFormValidator } from "#validators/form";
+import {
+  createFormValidator,
+  filledFieldsValidator,
+  updateFormValidator,
+} from "#validators/form";
 
 export default class FormsController {
   /**
@@ -36,12 +40,23 @@ export default class FormsController {
 
     await bouncer.authorize("manage_form", await Event.findOrFail(eventId));
 
-    const { attributesIds, ...newFormData } =
+    const { attributes, ...newFormData } =
       await request.validateUsing(createFormValidator);
 
     const form = await Form.create({ ...newFormData, eventId });
 
-    await form.related("attributes").attach(attributesIds);
+    await form.related("attributes").attach(
+      attributes.reduce(
+        (acc, attribute) => {
+          acc[attribute.id] = {
+            is_required: attribute.isRequired,
+            is_editable: attribute.isEditable,
+          };
+          return acc;
+        },
+        {} as Record<number, { is_required?: boolean; is_editable?: boolean }>,
+      ),
+    );
 
     return form;
   }
@@ -84,15 +99,30 @@ export default class FormsController {
       .where("id", formId)
       .firstOrFail();
 
-    const { attributesIds, ...updates } =
+    const { attributes, ...updates } =
       await request.validateUsing(updateFormValidator);
 
     form.merge(updates);
-
     await form.save();
 
-    if (attributesIds !== undefined) {
-      await form.related("attributes").sync(attributesIds);
+    if (attributes !== undefined) {
+      await form.related("attributes").detach();
+
+      await form.related("attributes").attach(
+        attributes.reduce(
+          (acc, attribute) => {
+            acc[attribute.id] = {
+              is_required: attribute.isRequired,
+              is_editable: attribute.isEditable,
+            };
+            return acc;
+          },
+          {} as Record<
+            number,
+            { is_required?: boolean; is_editable?: boolean }
+          >,
+        ),
+      );
     }
 
     const updatedForm = await Form.query()
@@ -123,5 +153,40 @@ export default class FormsController {
       .delete();
 
     return response.noContent();
+  }
+
+  /**
+   * @requiredFields
+   * @operationId getMissingRequiredFields
+   * @description Returns missing required fields for a given form based on user input
+   * @tag forms
+   * @requestBody { filledFields: { [key: string]: any } } - User's filled fields
+   * @responseBody 200 - { missingRequiredFields: { id: number, name: string }[] }
+   * @responseBody 404 - { "message": "Form not found", "name": "Exception", "status": 404 }
+   */
+  public async requiredFields({ params, request, response }: HttpContext) {
+    const formId = +params.id;
+
+    const { filledFields } = await request.validateUsing(filledFieldsValidator);
+
+    const form = await Form.query()
+      .where("id", formId)
+      .preload("attributes", async (query) => {
+        await query.pivotColumns(["is_required"]);
+      })
+      .firstOrFail();
+
+    const missingRequiredFields = form.attributes
+      .filter((attribute) => attribute.$extras.pivot_is_required === true)
+      .filter(
+        (attribute) =>
+          !Object.prototype.hasOwnProperty.call(filledFields, attribute.name),
+      )
+      .map((attribute) => ({
+        id: attribute.id,
+        name: attribute.name,
+      }));
+
+    return response.json({ missingRequiredFields });
   }
 }
