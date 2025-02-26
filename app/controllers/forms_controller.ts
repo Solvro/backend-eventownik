@@ -31,15 +31,28 @@ export default class FormsController {
    * @requestBody <createFormValidator>
    * @returnBody 201 - <Form>
    */
-  public async store({ params, request, bouncer }: HttpContext) {
+  public async store({ params, request, bouncer, response }: HttpContext) {
     const eventId = Number(params.eventId);
 
     await bouncer.authorize("manage_form", await Event.findOrFail(eventId));
 
-    const { attributesIds, ...newFormData } =
+    const event = await Event.findOrFail(eventId);
+
+    const { attributesIds, isFirstForm, ...newFormData } =
       await request.validateUsing(createFormValidator);
 
+    if (isFirstForm && event.firstFormId !== null) {
+      return response.badRequest({
+        message: "Event already has a registration form",
+      });
+    }
+
     const form = await Form.create({ ...newFormData, eventId });
+
+    if (isFirstForm) {
+      event.firstFormId = form.id;
+      await event.save();
+    }
 
     await form.related("attributes").attach(attributesIds);
 
@@ -74,18 +87,28 @@ export default class FormsController {
    * @responseBody 404 - { "message": "Row not found", "name": "Exception", "status": 404 }
    * @tag forms
    */
-  public async update({ params, request, bouncer }: HttpContext) {
+  public async update({ params, request, bouncer, response }: HttpContext) {
     const eventId = Number(params.eventId);
     const formId = Number(params.id);
     await bouncer.authorize("manage_form", await Event.findOrFail(eventId));
-
+    const event = await Event.findOrFail(eventId);
     const form = await Form.query()
       .where("event_id", eventId)
       .where("id", formId)
       .firstOrFail();
 
-    const { attributesIds, ...updates } =
+    const { attributesIds, isFirstForm, ...updates } =
       await request.validateUsing(updateFormValidator);
+
+    if (
+      event.firstFormId !== null &&
+      event.firstFormId !== formId &&
+      isFirstForm
+    ) {
+      return response.badRequest({
+        message: "Event already has a registration form",
+      });
+    }
 
     form.merge(updates);
 
@@ -93,6 +116,11 @@ export default class FormsController {
 
     if (attributesIds !== undefined) {
       await form.related("attributes").sync(attributesIds);
+    }
+
+    if (isFirstForm) {
+      event.firstFormId = form.id;
+      await event.save();
     }
 
     const updatedForm = await Form.query()
