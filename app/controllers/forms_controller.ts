@@ -47,7 +47,7 @@ export default class FormsController {
       });
     }
 
-    const form = await Form.create({ ...newFormData, eventId });
+    const form = await event.related("forms").create(newFormData);
 
     if (isFirstForm) {
       event.firstFormId = form.id;
@@ -104,7 +104,7 @@ export default class FormsController {
     if (
       event.firstFormId !== null &&
       event.firstFormId !== formId &&
-      isFirstForm
+      isFirstForm === true
     ) {
       return response.badRequest({
         message: "Event already has a registration form",
@@ -119,7 +119,7 @@ export default class FormsController {
       await form.related("attributes").sync(attributesIds);
     }
 
-    if (isFirstForm) {
+    if (isFirstForm === true) {
       event.firstFormId = form.id;
       await event.save();
     }
