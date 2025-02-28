@@ -4,12 +4,11 @@ import { BaseModel, column, hasMany, manyToMany } from "@adonisjs/lucid/orm";
 import type { HasMany, ManyToMany } from "@adonisjs/lucid/types/relations";
 
 import Email from "#models/email";
+import Form from "#models/form";
 
 import Admin from "./admin.js";
 import Participant from "./participant.js";
 import Permission from "./permission.js";
-
-// import Form from './Form.ts';
 
 export default class Event extends BaseModel {
   @column({ isPrimary: true })
@@ -74,14 +73,14 @@ export default class Event extends BaseModel {
   })
   declare permissions: ManyToMany<typeof Permission>;
 
-  // @belongsTo(() => Form)
-  // public firstForm: BelongsTo<typeof Form>;
-
   @hasMany(() => Participant)
   declare participants: HasMany<typeof Participant>;
 
   @hasMany(() => Email)
   declare emails: HasMany<typeof Email>;
+
+  @hasMany(() => Form)
+  declare forms: HasMany<typeof Form>;
 
   @column()
   declare socialMediaLinks: string[] | null;
