@@ -4,6 +4,7 @@ import mail from "@adonisjs/mail/services/main";
 
 import Email from "#models/email";
 import Event from "#models/event";
+import Form from "#models/form";
 import Participant from "#models/participant";
 
 import { EmailTriggerType } from "../types/trigger_types.js";
@@ -38,6 +39,7 @@ export class EmailService {
     event: Event,
     participant: Participant,
     email: Email,
+    form?: Form,
     sendBy = "system",
   ) {
     await participant
@@ -52,7 +54,7 @@ export class EmailService {
         .from("eventownik@solvro.pl", event.name)
         .subject(email.name)
         .replyTo(event.contactEmail ?? event.mainOrganizer.email)
-        .html(this.parseContent(event, participant, email));
+        .html(this.parseContent(event, participant, email, form));
 
       await participant
         .related("emails")
@@ -63,7 +65,12 @@ export class EmailService {
     });
   }
 
-  static parseContent(event: Event, participant: Participant, email: Email) {
+  static parseContent(
+    event: Event,
+    participant: Participant,
+    email: Email,
+    form?: Form,
+  ) {
     const content = email.content;
     let parsedContent = content
       .replace(/\/event_name/g, event.name)
@@ -86,6 +93,13 @@ export class EmailService {
       )
       .replace(/\/participant_email/g, participant.email)
       .replace(/\/participant_slug/g, participant.slug);
+
+    if (form !== undefined) {
+      parsedContent = parsedContent.replace(
+        /\/form_url/g,
+        `https://www.eventownik.solvro.pl/${event.slug}/${form.slug}/${participant.slug}`,
+      );
+    }
 
     for (const attribute of participant.attributes) {
       parsedContent = parsedContent.replace(
