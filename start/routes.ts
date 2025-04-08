@@ -78,7 +78,7 @@ router
               ParticipantsAttributesController,
               "downloadFile",
             ]);
-            router.put("participants/bulk-update", [
+            router.put("attributes/:attributeId/bulk-update", [
               ParticipantsAttributesController,
               "bulkUpdate",
             ]);
