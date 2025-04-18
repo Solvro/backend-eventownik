@@ -27,6 +27,7 @@ export class EmailService {
         // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
         query.where("trigger_value_2", triggerValue2!),
       )
+      .preload("form")
       .first();
 
     if (email === null) {
@@ -42,6 +43,7 @@ export class EmailService {
     email: Email,
     sendBy = "system",
   ) {
+    await email.load("form");
     await participant
       .related("emails")
       .attach({ [email.id]: { status: "pending", send_by: sendBy } });
@@ -72,6 +74,7 @@ export class EmailService {
     message: Message,
   ) {
     const content = email.content;
+    const { form } = email;
     let parsedContent = content
       .replace(/\/event_name/g, event.name)
       .replace(
@@ -108,6 +111,13 @@ export class EmailService {
           return `cid:${cid}`;
         },
       );
+
+    if (form !== undefined) {
+      parsedContent = parsedContent.replace(
+        /\/form_url/g,
+        `${process.env.DOMAIN}/${event.slug}/${form.slug}/${participant.slug}`,
+      );
+    }
 
     for (const attribute of participant.attributes) {
       parsedContent = parsedContent.replace(
